@@ -3,6 +3,11 @@
 from app.config.settings import (
     DEPARTAMENTOS,
     MUNICIPIOS,
+    TABLA_BARRIO,
+    TABLA_CORREGIMIENTO,
+    TABLA_DEPARTAMENTO,
+    TABLA_MUNICIPIO,
+    TABLA_VEREDA,
     TABLAS_CARGA,
     TAMANO_LOTE
 )
@@ -20,9 +25,9 @@ def leer_territorio(engine):
         existentes = {}
 
         for nombre, tabla, codigo, texto in [
-            ("corregimiento", "dimCorregimiento", "cdcorregimiento", "nmcorregimiento"),
-            ("vereda", "dimVereda", "cdvereda", "nmvereda"),
-            ("barrio", "dimBarrio", "cdbarrio", "nmbarrio")
+            ("corregimiento", TABLA_CORREGIMIENTO, "cdcorregimiento", "nmcorregimiento"),
+            ("vereda", TABLA_VEREDA, "cdvereda", "nmvereda"),
+            ("barrio", TABLA_BARRIO, "cdbarrio", "nmbarrio")
         ]:
             cursor.execute(f"SELECT {texto}, {codigo} FROM {tabla}")
             existentes[nombre] = {fila[0]: fila[1] for fila in cursor.fetchall()}
@@ -38,15 +43,15 @@ def insertar_dimensiones(cursor, codigos):
     # 🔥 Las dimensiones no se reemplazan: solo entran los valores nuevos
     for cddpto, nombre in DEPARTAMENTOS.items():
         cursor.execute(
-            "IF NOT EXISTS (SELECT 1 FROM dimDepartamento WHERE cddpto = ?) "
-            "INSERT INTO dimDepartamento (cddpto, nmdepartamento) VALUES (?, ?)",
+            f"IF NOT EXISTS (SELECT 1 FROM {TABLA_DEPARTAMENTO} WHERE cddpto = ?) "
+            f"INSERT INTO {TABLA_DEPARTAMENTO} (cddpto, nmdepartamento) VALUES (?, ?)",
             cddpto, cddpto, nombre
         )
 
     for cdmunicipio, nombre in MUNICIPIOS.items():
         cursor.execute(
-            "IF NOT EXISTS (SELECT 1 FROM dimMunicipio WHERE cdmunicipio = ?) "
-            "INSERT INTO dimMunicipio (cdmunicipio, cddpto, nmmunicipio) VALUES (?, ?, ?)",
+            f"IF NOT EXISTS (SELECT 1 FROM {TABLA_MUNICIPIO} WHERE cdmunicipio = ?) "
+            f"INSERT INTO {TABLA_MUNICIPIO} (cdmunicipio, cddpto, nmmunicipio) VALUES (?, ?, ?)",
             cdmunicipio, cdmunicipio, cdmunicipio[:2], nombre
         )
 
@@ -54,8 +59,8 @@ def insertar_dimensiones(cursor, codigos):
 
     for nombre, codigo in codigos["corregimiento"].items():
         cursor.execute(
-            "IF NOT EXISTS (SELECT 1 FROM dimCorregimiento WHERE cdcorregimiento = ?) "
-            "INSERT INTO dimCorregimiento (cdcorregimiento, cdmunicipio, nmcorregimiento) "
+            f"IF NOT EXISTS (SELECT 1 FROM {TABLA_CORREGIMIENTO} WHERE cdcorregimiento = ?) "
+            f"INSERT INTO {TABLA_CORREGIMIENTO} (cdcorregimiento, cdmunicipio, nmcorregimiento) "
             "VALUES (?, ?, ?)",
             codigo, codigo, cdmunicipio, nombre
         )
@@ -63,16 +68,16 @@ def insertar_dimensiones(cursor, codigos):
     # 🔥 cdcorregimiento queda nulo: cada vereda aparece con varios corregimientos
     for nombre, codigo in codigos["vereda"].items():
         cursor.execute(
-            "IF NOT EXISTS (SELECT 1 FROM dimVereda WHERE cdvereda = ?) "
-            "INSERT INTO dimVereda (cdvereda, cdcorregimiento, nmvereda) "
+            f"IF NOT EXISTS (SELECT 1 FROM {TABLA_VEREDA} WHERE cdvereda = ?) "
+            f"INSERT INTO {TABLA_VEREDA} (cdvereda, cdcorregimiento, nmvereda) "
             "VALUES (?, NULL, ?)",
             codigo, codigo, nombre
         )
 
     for nombre, codigo in codigos["barrio"].items():
         cursor.execute(
-            "IF NOT EXISTS (SELECT 1 FROM dimBarrio WHERE cdbarrio = ?) "
-            "INSERT INTO dimBarrio (cdbarrio, cdmunicipio, nmbarrio) VALUES (?, ?, ?)",
+            f"IF NOT EXISTS (SELECT 1 FROM {TABLA_BARRIO} WHERE cdbarrio = ?) "
+            f"INSERT INTO {TABLA_BARRIO} (cdbarrio, cdmunicipio, nmbarrio) VALUES (?, ?, ?)",
             codigo, codigo, cdmunicipio, nombre
         )
 

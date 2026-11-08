@@ -348,6 +348,7 @@ for _, indicador, _ in GRUPOS_RELACION:
     CATALOGOS[indicador] = SI_NO_NA
 
 # 🔥 Mapeo Excel -> columnas Riodata
+# Destino: PLN001008 (Vivienda)
 MAPA_VIVIENDA = {
     "IDVIVIENDA": "idvivienda",
     "COD_MPIO": "cdmunicipio",
@@ -369,6 +370,7 @@ MAPA_VIVIENDA = {
     "NUM_HOGARES_VIVIENDA": "qthogaresvivienda"
 }
 
+# Destino: PLN001009 (Hogar)
 MAPA_HOGAR = {
     "IDHOGAR": "idhogar",
     "IDVIVIENDA": "idvivienda",
@@ -405,6 +407,7 @@ MAPA_HOGAR = {
     "CLASIFICACION": "cdclasificacionsisben"
 }
 
+# Destino: PLN001013 (Persona)
 MAPA_PERSONA = {
     "IDPERSONA": "idpersona",
     "IDHOGAR": "idhogar",
@@ -431,15 +434,33 @@ MAPA_PERSONA = {
     "TIP_EMPLEADO": "cdtipoempleo"
 }
 
+# 🔥 Nombres físicos de las tablas (código PLN001###)
+TABLA_DOMINIO = "PLN001001"                # catDominio
+TABLA_DOMINIO_VALOR = "PLN001002"          # catDominioValor
+TABLA_DEPARTAMENTO = "PLN001003"           # dimDepartamento
+TABLA_MUNICIPIO = "PLN001004"              # dimMunicipio
+TABLA_CORREGIMIENTO = "PLN001005"          # dimCorregimiento
+TABLA_VEREDA = "PLN001006"                 # dimVereda
+TABLA_BARRIO = "PLN001007"                 # dimBarrio
+TABLA_VIVIENDA = "PLN001008"               # Vivienda
+TABLA_HOGAR = "PLN001009"                  # Hogar
+TABLA_HOGAR_GASTO = "PLN001010"            # HogarGasto
+TABLA_HOGAR_EVENTO = "PLN001011"           # HogarEvento
+TABLA_HOGAR_PRIVACION_IPM = "PLN001012"    # HogarPrivacionIpm
+TABLA_PERSONA = "PLN001013"                # Persona
+TABLA_PERSONA_RELACION = "PLN001014"       # PersonaRelacion
+TABLA_PERSONA_DISCAPACIDAD = "PLN001015"   # PersonaDiscapacidad
+TABLA_PERSONA_INGRESO = "PLN001016"        # PersonaIngreso
+
 # 🔥 Orden de borrado; las inserciones van al revés
 TABLAS_CARGA = [
-    "PersonaRelacion",
-    "PersonaIngreso",
-    "PersonaDiscapacidad",
-    "Persona",
-    "HogarPrivacionIpm",
-    "HogarEvento",
-    "HogarGasto",
-    "Hogar",
-    "Vivienda"
+    TABLA_PERSONA_RELACION,
+    TABLA_PERSONA_INGRESO,
+    TABLA_PERSONA_DISCAPACIDAD,
+    TABLA_PERSONA,
+    TABLA_HOGAR_PRIVACION_IPM,
+    TABLA_HOGAR_EVENTO,
+    TABLA_HOGAR_GASTO,
+    TABLA_HOGAR,
+    TABLA_VIVIENDA
 ]

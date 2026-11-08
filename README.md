@@ -4,6 +4,31 @@ Es un **proceso ETL que migra el archivo Excel del SISBÉN IV a SQL Server**, en
 
 ---
 
+## 🗂️ Nombres de las tablas
+
+Las tablas usan el código `PLN001###`. En el código Python están en `settings.py` como constantes `TABLA_*`.
+
+| Tabla | Nombre funcional | Depende de | Quién la llena |
+|---|---|---|---|
+| `PLN001001` | catDominio | — | `02_sisben_iv_catalogos_sqlserver.sql` |
+| `PLN001002` | catDominioValor | PLN001001 | `02_sisben_iv_catalogos_sqlserver.sql` |
+| `PLN001003` | dimDepartamento | — | Migrador (solo valores nuevos) |
+| `PLN001004` | dimMunicipio | PLN001003 | Migrador (solo valores nuevos) |
+| `PLN001005` | dimCorregimiento | PLN001004 | Migrador (solo valores nuevos) |
+| `PLN001006` | dimVereda | PLN001005 | Migrador (solo valores nuevos) |
+| `PLN001007` | dimBarrio | PLN001004 | Migrador (solo valores nuevos) |
+| `PLN001008` | Vivienda | PLN001004 – PLN001007 | Migrador, desde el Excel |
+| `PLN001009` | Hogar | PLN001008 | Migrador, desde el Excel |
+| `PLN001010` | HogarGasto | PLN001009 | Migrador, desde el Excel |
+| `PLN001011` | HogarEvento | PLN001009 | Migrador, desde el Excel |
+| `PLN001012` | HogarPrivacionIpm | PLN001009 | Migrador, desde el Excel |
+| `PLN001013` | Persona | PLN001009 | Migrador, desde el Excel |
+| `PLN001014` | PersonaRelacion | PLN001013 (dos veces) | Migrador, desde el Excel |
+| `PLN001015` | PersonaDiscapacidad | PLN001013 | Migrador, desde el Excel |
+| `PLN001016` | PersonaIngreso | PLN001013 | Migrador, desde el Excel |
+
+---
+
 ## ⚙️ ¿Qué hace?
 
 1. **Carga datos**

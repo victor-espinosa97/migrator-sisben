@@ -11,10 +11,10 @@
 USE sisbeniv;
 GO
 
-DELETE FROM catDominioValor;
-DELETE FROM catDominio;
+DELETE FROM PLN001002;
+DELETE FROM PLN001001;
 
-INSERT INTO catDominio (cddominio, nmdominio, dspregunta) VALUES
+INSERT INTO PLN001001 (cddominio, nmdominio, dspregunta) VALUES
   ('sino', N'Sí / No', N'Dominio genérico de indicadores binarios'),
   ('sino9', N'Sí / No / No aplica', N'Dominio genérico de indicadores con flujo'),
   ('gasto', N'Indicador de gasto mensual', N'41A–41H'),
@@ -51,7 +51,7 @@ INSERT INTO catDominio (cddominio, nmdominio, dspregunta) VALUES
   ('tiporelacion', N'Tipo de relación entre personas del hogar', N'56, 57, 58'),
   ('clasificacionsisben', N'Clasificación SISBÉN IV', N'Variable derivada');
 
-INSERT INTO catDominioValor (cddominio, cdvalor, dsvalor, cdagrupacion, fgnoaplica) VALUES
+INSERT INTO PLN001002 (cddominio, cdvalor, dsvalor, cdagrupacion, fgnoaplica) VALUES
   ('sino', N'1', N'Sí', NULL, 0),
   ('sino', N'2', N'No', NULL, 0),
   ('sino9', N'1', N'Sí', NULL, 0),
@@ -337,7 +337,7 @@ INSERT INTO catDominioValor (cddominio, cdvalor, dsvalor, cdagrupacion, fgnoapli
 -- Resumen: 35 dominios, 281 valores.
 -- Verificación:
 --   SELECT d.cddominio, d.nmdominio, COUNT(v.cdvalor) AS qtvalores
---   FROM catDominio d
---   LEFT JOIN catDominioValor v ON v.cddominio = d.cddominio
+--   FROM PLN001001 d
+--   LEFT JOIN PLN001002 v ON v.cddominio = d.cddominio
 --   GROUP BY d.cddominio, d.nmdominio
 --   ORDER BY d.cddominio;

@@ -1,7 +1,20 @@
 -- =====================================================================
 -- SISBÉN IV — Esquema relacional para SQL Server
 -- Traducción de insumos/01_sisben_iv_schema.sql (escrito para MySQL)
--- Nomenclatura: estándar Riodata. Tablas y columnas no cambian.
+-- Nomenclatura: estándar Riodata. Columnas sin cambio; tablas con
+-- código PLN001###:
+--   PLN001001 catDominio          PLN001009 Hogar
+--   PLN001002 catDominioValor     PLN001010 HogarGasto
+--   PLN001003 dimDepartamento     PLN001011 HogarEvento
+--   PLN001004 dimMunicipio        PLN001012 HogarPrivacionIpm
+--   PLN001005 dimCorregimiento    PLN001013 Persona
+--   PLN001006 dimVereda           PLN001014 PersonaRelacion
+--   PLN001007 dimBarrio           PLN001015 PersonaDiscapacidad
+--   PLN001008 Vivienda            PLN001016 PersonaIngreso
+--
+-- Este script SOLO crea la estructura: no tiene ningún INSERT.
+-- Los catálogos los carga 02_sisben_iv_catalogos_sqlserver.sql y los
+-- registros del Excel los carga el migrador (python main.py).
 --
 -- Ejecutar con sqlcmd (usa separadores GO):
 --   sqlcmd -S servidor -U usuario -f 65001 -i sql/01_sisben_iv_schema_sqlserver.sql
@@ -38,7 +51,7 @@ GO
 USE sisbeniv;
 GO
 
-IF OBJECT_ID('dbo.Persona', 'U') IS NOT NULL
+IF OBJECT_ID('dbo.PLN001013', 'U') IS NOT NULL
 BEGIN
   PRINT 'El esquema ya existe. No se ejecuta nada.';
   SET NOEXEC ON;
@@ -51,7 +64,8 @@ GO
 --    tablas para los 35 dominios de codificación del conjunto.
 -- =====================================================================
 
-CREATE TABLE catDominio (
+-- PLN001001 · catDominio
+CREATE TABLE PLN001001 (
   cddominio    VARCHAR(30)  NOT NULL, -- Código del dominio de codificación
   nmdominio    VARCHAR(100) NOT NULL, -- Nombre legible del dominio
   dspregunta   VARCHAR(255) NULL, -- Pregunta(s) de la encuesta que usan el dominio
@@ -60,7 +74,8 @@ CREATE TABLE catDominio (
 GO
 -- Dominios de codificación declarados en el diccionario SISBÉN IV
 
-CREATE TABLE catDominioValor (
+-- PLN001002 · catDominioValor
+CREATE TABLE PLN001002 (
   cddominio    VARCHAR(30)  NOT NULL, -- Dominio al que pertenece el valor
   cdvalor      VARCHAR(3)   NOT NULL, -- Código del valor tal como viene en la base
   dsvalor      VARCHAR(255) NOT NULL, -- Descripción del valor
@@ -68,7 +83,7 @@ CREATE TABLE catDominioValor (
   fgnoaplica   TINYINT NOT NULL DEFAULT 0, -- 1 = el valor significa «no aplica» o «no sabe»; 0 = valor sustantivo
   CONSTRAINT pk_catdominiovalor PRIMARY KEY (cddominio, cdvalor),
   CONSTRAINT fk_catdominiovalor_dominio
-    FOREIGN KEY (cddominio) REFERENCES catDominio (cddominio)
+    FOREIGN KEY (cddominio) REFERENCES PLN001001 (cddominio)
     ON DELETE NO ACTION,
   CONSTRAINT ck_catdominiovalor_noaplica CHECK (fgnoaplica IN (0, 1))
 );
@@ -76,7 +91,7 @@ GO
 -- Valores válidos por dominio; capa de etiquetado para Power BI
 
 CREATE INDEX ix_catdominiovalor_agrupacion
-  ON catDominioValor (cddominio, cdagrupacion);
+  ON PLN001002 (cddominio, cdagrupacion);
 
 
 -- =====================================================================
@@ -85,7 +100,8 @@ CREATE INDEX ix_catdominiovalor_agrupacion
 --    (cod_* + NOM_*) en 5 catálogos jerárquicos.
 -- =====================================================================
 
-CREATE TABLE dimDepartamento (
+-- PLN001003 · dimDepartamento
+CREATE TABLE PLN001003 (
   cddpto         VARCHAR(2)   NOT NULL, -- Código DANE del departamento
   nmdepartamento VARCHAR(100) NOT NULL, -- Nombre del departamento
   CONSTRAINT pk_dimdepartamento PRIMARY KEY (cddpto),
@@ -94,13 +110,14 @@ CREATE TABLE dimDepartamento (
 GO
 -- Catálogo DANE de departamentos
 
-CREATE TABLE dimMunicipio (
+-- PLN001004 · dimMunicipio
+CREATE TABLE PLN001004 (
   cdmunicipio  VARCHAR(5)   NOT NULL, -- Código DANE del municipio (5 dígitos)
   cddpto       VARCHAR(2)   NOT NULL, -- Departamento al que pertenece
   nmmunicipio  VARCHAR(100) NOT NULL, -- Nombre del municipio
   CONSTRAINT pk_dimmunicipio PRIMARY KEY (cdmunicipio),
   CONSTRAINT fk_dimmunicipio_dpto
-    FOREIGN KEY (cddpto) REFERENCES dimDepartamento (cddpto)
+    FOREIGN KEY (cddpto) REFERENCES PLN001003 (cddpto)
     ON DELETE NO ACTION,
   CONSTRAINT ck_dimmunicipio_cdmunicipio CHECK (cdmunicipio LIKE '[0-9][0-9][0-9][0-9][0-9]'),
   -- Regla del diccionario: el código de municipio inicia con el de departamento
@@ -109,55 +126,58 @@ CREATE TABLE dimMunicipio (
 GO
 -- Catálogo DANE de municipios
 
-CREATE INDEX ix_dimmunicipio_dpto ON dimMunicipio (cddpto);
+CREATE INDEX ix_dimmunicipio_dpto ON PLN001004 (cddpto);
 GO
 
-CREATE TABLE dimCorregimiento (
+-- PLN001005 · dimCorregimiento
+CREATE TABLE PLN001005 (
   cdcorregimiento INT NOT NULL, -- Código del corregimiento registrado en SisbenApp
   cdmunicipio     VARCHAR(5)   NOT NULL, -- Municipio al que pertenece
   nmcorregimiento VARCHAR(100) NOT NULL, -- Nombre del corregimiento
   CONSTRAINT pk_dimcorregimiento PRIMARY KEY (cdcorregimiento),
   CONSTRAINT fk_dimcorregimiento_municipio
-    FOREIGN KEY (cdmunicipio) REFERENCES dimMunicipio (cdmunicipio)
+    FOREIGN KEY (cdmunicipio) REFERENCES PLN001004 (cdmunicipio)
     ON DELETE NO ACTION,
   CONSTRAINT ck_dimcorregimiento_codigo CHECK (cdcorregimiento BETWEEN 1 AND 9999)
 );
 GO
 -- Corregimientos; codificación interna SisbenApp, no DANE
 
-CREATE INDEX ix_dimcorregimiento_municipio ON dimCorregimiento (cdmunicipio);
+CREATE INDEX ix_dimcorregimiento_municipio ON PLN001005 (cdmunicipio);
 GO
 
-CREATE TABLE dimVereda (
+-- PLN001006 · dimVereda
+CREATE TABLE PLN001006 (
   cdvereda        INT NOT NULL, -- Código de la vereda registrado en SisbenApp
   cdcorregimiento INT NULL, -- Corregimiento al que pertenece; nulo si la vereda no está adscrita a uno
   nmvereda        VARCHAR(100) NOT NULL, -- Nombre de la vereda
   CONSTRAINT pk_dimvereda PRIMARY KEY (cdvereda),
   CONSTRAINT fk_dimvereda_corregimiento
-    FOREIGN KEY (cdcorregimiento) REFERENCES dimCorregimiento (cdcorregimiento)
+    FOREIGN KEY (cdcorregimiento) REFERENCES PLN001005 (cdcorregimiento)
     ON DELETE NO ACTION,
   CONSTRAINT ck_dimvereda_codigo CHECK (cdvereda BETWEEN 1 AND 999999)
 );
 GO
 -- Veredas; codificación interna SisbenApp, no DANE
 
-CREATE INDEX ix_dimvereda_corregimiento ON dimVereda (cdcorregimiento);
+CREATE INDEX ix_dimvereda_corregimiento ON PLN001006 (cdcorregimiento);
 GO
 
-CREATE TABLE dimBarrio (
+-- PLN001007 · dimBarrio
+CREATE TABLE PLN001007 (
   cdbarrio    INT NOT NULL, -- Código del barrio registrado en SisbenApp
   cdmunicipio VARCHAR(5)   NOT NULL, -- Municipio al que pertenece
   nmbarrio    VARCHAR(100) NOT NULL, -- Nombre del barrio
   CONSTRAINT pk_dimbarrio PRIMARY KEY (cdbarrio),
   CONSTRAINT fk_dimbarrio_municipio
-    FOREIGN KEY (cdmunicipio) REFERENCES dimMunicipio (cdmunicipio)
+    FOREIGN KEY (cdmunicipio) REFERENCES PLN001004 (cdmunicipio)
     ON DELETE NO ACTION,
   CONSTRAINT ck_dimbarrio_codigo CHECK (cdbarrio BETWEEN 1 AND 999999)
 );
 GO
 -- Barrios; codificación interna SisbenApp, no DANE
 
-CREATE INDEX ix_dimbarrio_municipio ON dimBarrio (cdmunicipio);
+CREATE INDEX ix_dimbarrio_municipio ON PLN001007 (cdmunicipio);
 GO
 
 
@@ -167,7 +187,8 @@ GO
 --    12 propias de la vivienda
 -- =====================================================================
 
-CREATE TABLE Vivienda (
+-- PLN001008 · Vivienda
+CREATE TABLE PLN001008 (
   idvivienda            BIGINT  NOT NULL, -- Clave sustituta; NO viene en el archivo fuente
   cdmunicipio           VARCHAR(5)       NOT NULL, -- cod_mpio — código DANE del municipio
   cdclase               TINYINT NOT NULL, -- Cod_clase — 1 Cabecera, 2 Centro poblado, 3 Rural disperso
@@ -190,16 +211,16 @@ CREATE TABLE Vivienda (
   CONSTRAINT pk_vivienda PRIMARY KEY (idvivienda),
 
   CONSTRAINT fk_vivienda_municipio
-    FOREIGN KEY (cdmunicipio) REFERENCES dimMunicipio (cdmunicipio)
+    FOREIGN KEY (cdmunicipio) REFERENCES PLN001004 (cdmunicipio)
     ON DELETE NO ACTION,
   CONSTRAINT fk_vivienda_corregimiento
-    FOREIGN KEY (cdcorregimiento) REFERENCES dimCorregimiento (cdcorregimiento)
+    FOREIGN KEY (cdcorregimiento) REFERENCES PLN001005 (cdcorregimiento)
     ON DELETE NO ACTION,
   CONSTRAINT fk_vivienda_vereda
-    FOREIGN KEY (cdvereda) REFERENCES dimVereda (cdvereda)
+    FOREIGN KEY (cdvereda) REFERENCES PLN001006 (cdvereda)
     ON DELETE NO ACTION,
   CONSTRAINT fk_vivienda_barrio
-    FOREIGN KEY (cdbarrio) REFERENCES dimBarrio (cdbarrio)
+    FOREIGN KEY (cdbarrio) REFERENCES PLN001007 (cdbarrio)
     ON DELETE NO ACTION,
 
   CONSTRAINT ck_vivienda_clase         CHECK (cdclase IN (1, 2, 3)),
@@ -230,13 +251,13 @@ CREATE TABLE Vivienda (
 GO
 -- Unidad de vivienda: ubicación, materiales y servicios públicos
 
-CREATE INDEX ix_vivienda_municipio ON Vivienda (cdmunicipio);
+CREATE INDEX ix_vivienda_municipio ON PLN001008 (cdmunicipio);
 GO
-CREATE INDEX ix_vivienda_barrio    ON Vivienda (cdbarrio);
+CREATE INDEX ix_vivienda_barrio    ON PLN001008 (cdbarrio);
 GO
-CREATE INDEX ix_vivienda_vereda    ON Vivienda (cdvereda);
+CREATE INDEX ix_vivienda_vereda    ON PLN001008 (cdvereda);
 GO
-CREATE INDEX ix_vivienda_clase     ON Vivienda (cdclase);
+CREATE INDEX ix_vivienda_clase     ON PLN001008 (cdclase);
 GO
 
 
@@ -244,7 +265,8 @@ GO
 -- 4. HOGAR  (32 variables del diccionario)
 -- =====================================================================
 
-CREATE TABLE Hogar (
+-- PLN001009 · Hogar
+CREATE TABLE PLN001009 (
   idhogar                    VARCHAR(20)      NOT NULL, -- ide_hogar — única clave real del archivo fuente
   idvivienda                 BIGINT  NOT NULL, -- Vivienda que ocupa el hogar
 
@@ -296,7 +318,7 @@ CREATE TABLE Hogar (
   CONSTRAINT pk_hogar PRIMARY KEY (idhogar),
 
   CONSTRAINT fk_hogar_vivienda
-    FOREIGN KEY (idvivienda) REFERENCES Vivienda (idvivienda)
+    FOREIGN KEY (idvivienda) REFERENCES PLN001008 (idvivienda)
     ON DELETE CASCADE,
 
   CONSTRAINT ck_hogar_ocupacion    CHECK (cdocupacionvivienda BETWEEN 1 AND 5),
@@ -353,11 +375,11 @@ CREATE TABLE Hogar (
 GO
 -- Hogar: condiciones de habitabilidad, bienes, IPM y clasificación
 
-CREATE INDEX ix_hogar_vivienda       ON Hogar (idvivienda);
+CREATE INDEX ix_hogar_vivienda       ON PLN001009 (idvivienda);
 GO
-CREATE INDEX ix_hogar_clasificacion  ON Hogar (cdclasificacionsisben);
+CREATE INDEX ix_hogar_clasificacion  ON PLN001009 (cdclasificacionsisben);
 GO
-CREATE INDEX ix_hogar_ipm            ON Hogar (fgpobrezamultidimensional);
+CREATE INDEX ix_hogar_ipm            ON PLN001009 (fgpobrezamultidimensional);
 GO
 
 
@@ -367,7 +389,8 @@ GO
 -- =====================================================================
 
 -- 16 variables: 8 pares fggasto* / mngasto*  (preguntas 41A–41H)
-CREATE TABLE HogarGasto (
+-- PLN001010 · HogarGasto
+CREATE TABLE PLN001010 (
   idhogar      VARCHAR(20)      NOT NULL, -- Hogar al que corresponde el gasto
   cdrubrogasto TINYINT NOT NULL, -- Rubro de gasto; catálogo rubrogasto
   fggasto      TINYINT NOT NULL, -- 1 Sí, 2 No, 9 Sí pero no sabe el valor
@@ -375,7 +398,7 @@ CREATE TABLE HogarGasto (
 
   CONSTRAINT pk_hogargasto PRIMARY KEY (idhogar, cdrubrogasto),
   CONSTRAINT fk_hogargasto_hogar
-    FOREIGN KEY (idhogar) REFERENCES Hogar (idhogar)
+    FOREIGN KEY (idhogar) REFERENCES PLN001009 (idhogar)
     ON DELETE CASCADE,
   CONSTRAINT ck_hogargasto_rubro CHECK (cdrubrogasto BETWEEN 1 AND 8),
   CONSTRAINT ck_hogargasto_flag  CHECK (fggasto IN (1, 2, 9)),
@@ -387,11 +410,12 @@ CREATE TABLE HogarGasto (
 GO
 -- Gastos mensuales del hogar por rubro (normaliza 16 variables)
 
-CREATE INDEX ix_hogargasto_rubro ON HogarGasto (cdrubrogasto);
+CREATE INDEX ix_hogargasto_rubro ON PLN001010 (cdrubrogasto);
 GO
 
 -- 12 variables: 6 pares fgevento* / qtevento*  (preguntas 43A–43F)
-CREATE TABLE HogarEvento (
+-- PLN001011 · HogarEvento
+CREATE TABLE PLN001011 (
   idhogar      VARCHAR(20)       NOT NULL, -- Hogar afectado
   cdtipoevento TINYINT  NOT NULL, -- Tipo de evento; catálogo tipoevento
   fgevento     TINYINT  NOT NULL, -- 1 Sí, 2 No
@@ -399,7 +423,7 @@ CREATE TABLE HogarEvento (
 
   CONSTRAINT pk_hogarevento PRIMARY KEY (idhogar, cdtipoevento),
   CONSTRAINT fk_hogarevento_hogar
-    FOREIGN KEY (idhogar) REFERENCES Hogar (idhogar)
+    FOREIGN KEY (idhogar) REFERENCES PLN001009 (idhogar)
     ON DELETE CASCADE,
   CONSTRAINT ck_hogarevento_tipo CHECK (cdtipoevento BETWEEN 1 AND 6),
   CONSTRAINT ck_hogarevento_flag CHECK (fgevento IN (1, 2)),
@@ -410,18 +434,19 @@ CREATE TABLE HogarEvento (
 GO
 -- Eventos de riesgo que han afectado la vivienda (normaliza 12 variables)
 
-CREATE INDEX ix_hogarevento_tipo ON HogarEvento (cdtipoevento);
+CREATE INDEX ix_hogarevento_tipo ON PLN001011 (cdtipoevento);
 GO
 
 -- 15 variables: I1 a I15
-CREATE TABLE HogarPrivacionIpm (
+-- PLN001012 · HogarPrivacionIpm
+CREATE TABLE PLN001012 (
   idhogar        VARCHAR(20)      NOT NULL, -- Hogar evaluado
   cdprivacionipm TINYINT NOT NULL, -- Privación I1–I15; catálogo privacionipm
   fgprivacion    TINYINT NOT NULL, -- 0 No privado, 1 Privado
 
   CONSTRAINT pk_hogarprivacionipm PRIMARY KEY (idhogar, cdprivacionipm),
   CONSTRAINT fk_hogarprivacionipm_hogar
-    FOREIGN KEY (idhogar) REFERENCES Hogar (idhogar)
+    FOREIGN KEY (idhogar) REFERENCES PLN001009 (idhogar)
     ON DELETE CASCADE,
   CONSTRAINT ck_hogarprivacionipm_codigo CHECK (cdprivacionipm BETWEEN 1 AND 15),
   CONSTRAINT ck_hogarprivacionipm_flag   CHECK (fgprivacion IN (0, 1))
@@ -429,7 +454,7 @@ CREATE TABLE HogarPrivacionIpm (
 GO
 -- Privaciones IPM del hogar, I1–I15 (normaliza 15 variables)
 
-CREATE INDEX ix_hogarprivacionipm_codigo ON HogarPrivacionIpm (cdprivacionipm);
+CREATE INDEX ix_hogarprivacionipm_codigo ON PLN001012 (cdprivacionipm);
 GO
 
 
@@ -437,7 +462,8 @@ GO
 -- 6. PERSONA  (20 variables del diccionario)
 -- =====================================================================
 
-CREATE TABLE Persona (
+-- PLN001013 · Persona
+CREATE TABLE PLN001013 (
   idpersona                BIGINT   NOT NULL, -- Clave sustituta; NO viene en el archivo fuente
   idhogar                  VARCHAR(20)       NOT NULL, -- Hogar al que pertenece la persona
   qtordenpersona           TINYINT  NOT NULL, -- Número de orden dentro del hogar; se genera en la carga. Es el valor al que apuntan ide_conyuge, ide_padre e ide_serv_domestico
@@ -476,7 +502,7 @@ CREATE TABLE Persona (
   CONSTRAINT uq_persona_orden UNIQUE (idhogar, qtordenpersona),
 
   CONSTRAINT fk_persona_hogar
-    FOREIGN KEY (idhogar) REFERENCES Hogar (idhogar)
+    FOREIGN KEY (idhogar) REFERENCES PLN001009 (idhogar)
     ON DELETE CASCADE,
 
   CONSTRAINT ck_persona_sexo        CHECK (cdsexo IN (1, 2)),
@@ -530,13 +556,13 @@ CREATE TABLE Persona (
 GO
 -- Persona: demografía, salud, educación y actividad económica
 
-CREATE INDEX ix_persona_hogar        ON Persona (idhogar);
+CREATE INDEX ix_persona_hogar        ON PLN001013 (idhogar);
 GO
-CREATE INDEX ix_persona_parentesco   ON Persona (cdparentesco);
+CREATE INDEX ix_persona_parentesco   ON PLN001013 (cdparentesco);
 GO
-CREATE INDEX ix_persona_sexo_edad    ON Persona (cdsexo, qtedad);
+CREATE INDEX ix_persona_sexo_edad    ON PLN001013 (cdsexo, qtedad);
 GO
-CREATE INDEX ix_persona_niveleducativo ON Persona (cdniveleducativo);
+CREATE INDEX ix_persona_niveleducativo ON PLN001013 (cdniveleducativo);
 GO
 
 
@@ -548,7 +574,8 @@ GO
 -- 6 variables: ind_conyuge_vive_hogar / ide_conyuge,
 --              ind_padre_vive_hogar / ide_padre,
 --              ind_pariente_domestico / ide_serv_domestico
-CREATE TABLE PersonaRelacion (
+-- PLN001014 · PersonaRelacion
+CREATE TABLE PLN001014 (
   idpersona             BIGINT  NOT NULL, -- Persona declarante
   cdtiporelacion        TINYINT NOT NULL, -- 1 Cónyuge, 2 Padre o madre, 3 Servicio doméstico o pensionista
   fgvivehogar           TINYINT NOT NULL, -- 1 Sí, 2 No, 9 No aplica
@@ -556,10 +583,10 @@ CREATE TABLE PersonaRelacion (
 
   CONSTRAINT pk_personarelacion PRIMARY KEY (idpersona, cdtiporelacion),
   CONSTRAINT fk_personarelacion_persona
-    FOREIGN KEY (idpersona) REFERENCES Persona (idpersona)
+    FOREIGN KEY (idpersona) REFERENCES PLN001013 (idpersona)
     ON DELETE CASCADE,
   CONSTRAINT fk_personarelacion_relacionada
-    FOREIGN KEY (idpersonarelacionada) REFERENCES Persona (idpersona)
+    FOREIGN KEY (idpersonarelacionada) REFERENCES PLN001013 (idpersona)
     ON DELETE NO ACTION,
   CONSTRAINT ck_personarelacion_tipo CHECK (cdtiporelacion BETWEEN 1 AND 3),
   CONSTRAINT ck_personarelacion_flag CHECK (fgvivehogar IN (1, 2, 9)),
@@ -573,18 +600,19 @@ CREATE TABLE PersonaRelacion (
 GO
 -- Relaciones entre personas del mismo hogar (normaliza 6 variables)
 
-CREATE INDEX ix_personarelacion_relacionada ON PersonaRelacion (idpersonarelacionada);
+CREATE INDEX ix_personarelacion_relacionada ON PLN001014 (idpersonarelacionada);
 GO
 
 -- 8 variables: ind_discap_* (DATO SENSIBLE — Ley 1581 de 2012)
-CREATE TABLE PersonaDiscapacidad (
+-- PLN001015 · PersonaDiscapacidad
+CREATE TABLE PLN001015 (
   idpersona          BIGINT  NOT NULL, -- Persona evaluada
   cdtipodiscapacidad TINYINT NOT NULL, -- 1 Ver, 2 Oír, 3 Hablar, 4 Moverse, 5 Bañarse, 6 Salir, 7 Entender, 8 Ninguna
   fgdiscapacidad     TINYINT NOT NULL, -- 1 Sí, 2 No
 
   CONSTRAINT pk_personadiscapacidad PRIMARY KEY (idpersona, cdtipodiscapacidad),
   CONSTRAINT fk_personadiscapacidad_persona
-    FOREIGN KEY (idpersona) REFERENCES Persona (idpersona)
+    FOREIGN KEY (idpersona) REFERENCES PLN001013 (idpersona)
     ON DELETE CASCADE,
   CONSTRAINT ck_personadiscapacidad_tipo CHECK (cdtipodiscapacidad BETWEEN 1 AND 8),
   CONSTRAINT ck_personadiscapacidad_flag CHECK (fgdiscapacidad IN (1, 2))
@@ -592,12 +620,13 @@ CREATE TABLE PersonaDiscapacidad (
 GO
 -- Limitaciones permanentes, pregunta 59. DATO SENSIBLE (normaliza 8 variables)
 
-CREATE INDEX ix_personadiscapacidad_tipo ON PersonaDiscapacidad (cdtipodiscapacidad);
+CREATE INDEX ix_personadiscapacidad_tipo ON PLN001015 (cdtipodiscapacidad);
 GO
 
 -- 21 variables: 9 fuentes de ingreso + 3 subsidios del Estado
 -- (DATO SENSIBLE — Ley 1581 de 2012)
-CREATE TABLE PersonaIngreso (
+-- PLN001016 · PersonaIngreso
+CREATE TABLE PLN001016 (
   idpersona       BIGINT  NOT NULL, -- Persona perceptora
   cdfuenteingreso TINYINT NOT NULL, -- Fuente de ingreso; catálogo fuenteingreso
   fgingreso       TINYINT NOT NULL, -- 1 Sí, 2 No, 9 Sí pero no sabe el valor, 99 No aplica
@@ -606,7 +635,7 @@ CREATE TABLE PersonaIngreso (
 
   CONSTRAINT pk_personaingreso PRIMARY KEY (idpersona, cdfuenteingreso),
   CONSTRAINT fk_personaingreso_persona
-    FOREIGN KEY (idpersona) REFERENCES Persona (idpersona)
+    FOREIGN KEY (idpersona) REFERENCES PLN001013 (idpersona)
     ON DELETE CASCADE,
   CONSTRAINT ck_personaingreso_fuente CHECK (cdfuenteingreso BETWEEN 1 AND 12),
   CONSTRAINT ck_personaingreso_flag   CHECK (fgingreso IN (1, 2, 9, 99)),
@@ -624,18 +653,18 @@ CREATE TABLE PersonaIngreso (
 GO
 -- Ingresos de la persona por fuente. DATO SENSIBLE (normaliza 21 variables)
 
-CREATE INDEX ix_personaingreso_fuente ON PersonaIngreso (cdfuenteingreso);
+CREATE INDEX ix_personaingreso_fuente ON PLN001016 (cdfuenteingreso);
 GO
 
 
 -- =====================================================================
 -- COBERTURA DE VARIABLES
---   Vivienda             21   Persona                20
---   Hogar                32   PersonaRelacion         6
---   HogarGasto           16   PersonaDiscapacidad     8
---   HogarEvento          12   PersonaIngreso         21
---   HogarPrivacionIpm    15   -----------------------------
---                             TOTAL                 151
+--   PLN001008 Vivienda           21   PLN001013 Persona               20
+--   PLN001009 Hogar              32   PLN001014 PersonaRelacion        6
+--   PLN001010 HogarGasto         16   PLN001015 PersonaDiscapacidad    8
+--   PLN001011 HogarEvento        12   PLN001016 PersonaIngreso        21
+--   PLN001012 HogarPrivacionIpm  15   ---------------------------------
+--                                     TOTAL                          151
 -- =====================================================================
 
 SET NOEXEC OFF;

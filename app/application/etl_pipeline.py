@@ -10,7 +10,16 @@ from app.config.settings import (
     MAPA_HOGAR,
     MAPA_PERSONA,
     MAPA_VIVIENDA,
-    MINIMO_HOGARES_CUADRAN
+    MINIMO_HOGARES_CUADRAN,
+    TABLA_HOGAR,
+    TABLA_HOGAR_EVENTO,
+    TABLA_HOGAR_GASTO,
+    TABLA_HOGAR_PRIVACION_IPM,
+    TABLA_PERSONA,
+    TABLA_PERSONA_DISCAPACIDAD,
+    TABLA_PERSONA_INGRESO,
+    TABLA_PERSONA_RELACION,
+    TABLA_VIVIENDA
 )
 
 from app.domain.rules import (
@@ -81,26 +90,26 @@ def run_tablas(df, existentes):
     hogares = df.drop_duplicates("IDHOGAR")
 
     tablas = {
-        "Vivienda": mapear(df, MAPA_VIVIENDA, "IDVIVIENDA"),
-        "Hogar": mapear(df, MAPA_HOGAR, "IDHOGAR"),
-        "HogarGasto": girar_grupo(
+        TABLA_VIVIENDA: mapear(df, MAPA_VIVIENDA, "IDVIVIENDA"),
+        TABLA_HOGAR: mapear(df, MAPA_HOGAR, "IDHOGAR"),
+        TABLA_HOGAR_GASTO: girar_grupo(
             hogares, "idhogar", "cdrubrogasto", GRUPOS_GASTO, ["fggasto", "mngasto"]
         ),
-        "HogarEvento": girar_grupo(
+        TABLA_HOGAR_EVENTO: girar_grupo(
             hogares, "idhogar", "cdtipoevento", GRUPOS_EVENTO, ["fgevento", "qtevento"]
         ),
-        "HogarPrivacionIpm": girar_grupo(
+        TABLA_HOGAR_PRIVACION_IPM: girar_grupo(
             hogares, "idhogar", "cdprivacionipm", GRUPOS_PRIVACION, ["fgprivacion"]
         ),
-        "Persona": mapear(df, MAPA_PERSONA, "IDPERSONA"),
-        "PersonaDiscapacidad": girar_grupo(
+        TABLA_PERSONA: mapear(df, MAPA_PERSONA, "IDPERSONA"),
+        TABLA_PERSONA_DISCAPACIDAD: girar_grupo(
             df, "idpersona", "cdtipodiscapacidad", GRUPOS_DISCAPACIDAD, ["fgdiscapacidad"]
         ),
-        "PersonaIngreso": girar_grupo(
+        TABLA_PERSONA_INGRESO: girar_grupo(
             df, "idpersona", "cdfuenteingreso", GRUPOS_INGRESO,
             ["fgingreso", "mningreso", "qtmesesingreso"]
         ),
-        "PersonaRelacion": girar_relaciones(df, GRUPOS_RELACION)
+        TABLA_PERSONA_RELACION: girar_relaciones(df, GRUPOS_RELACION)
     }
 
     return tablas, codigos
